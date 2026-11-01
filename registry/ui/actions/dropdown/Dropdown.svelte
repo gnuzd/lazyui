@@ -80,6 +80,7 @@
     name,
   }: Props<T> = $props();
 
+  // ===== STATE =====
   let open = $state(false);
   let query = $state("");
   let highlighted = $state(0);
@@ -97,10 +98,12 @@
   let searchEl: HTMLInputElement | null = $state(null);
   let listEl: HTMLDivElement | null = $state(null);
 
+  // Positioning state
   let placement = $state<"bottom" | "top">("bottom");
   let dynamicMaxHeight = $state(panelMaxHeight);
-  let triggerRect = $state({ top: 0, bottom: 0, left: 0, width: 0 });
+  let triggerRect = $state({ top: 0, bottom: 0, left: 0, right: 0, width: 0 });
 
+  // ===== DERIVED =====
   const isMulti = $derived(multiple);
   const selectedValues = $derived<T[]>(
     value == null ? [] : Array.isArray(value) ? value : [value],
@@ -129,14 +132,78 @@
       .map(([k, v]) => `${k}: ${v}`)
       .join("; "),
   );
-  const panelStyle = $derived(
-    `left: ${triggerRect.left}px; width: ${triggerRect.width}px; max-height: ${dynamicMaxHeight}px; ${
-      placement === "bottom"
-        ? `top: ${triggerRect.bottom + 4}px`
-        : `bottom: ${window.innerHeight - triggerRect.top + 4}px`
-    }`,
-  );
 
+  // ===== SMART POSITIONING LOGIC =====
+  function updatePosition() {
+    if (!triggerEl) return;
+    const rect = triggerEl.getBoundingClientRect();
+    const vh = window.innerHeight;
+    const margin = 8;
+
+    triggerRect = {
+      top: rect.top,
+      bottom: rect.bottom,
+      left: rect.left,
+      right: rect.right,
+      width: rect.width,
+    };
+
+    // Y-Axis: Flip above if there is not enough space below
+    const spaceBelow = vh - rect.bottom;
+    const spaceAbove = rect.top;
+
+    if (spaceBelow < panelMaxHeight + margin && spaceAbove > spaceBelow) {
+      placement = "top";
+      dynamicMaxHeight = Math.min(panelMaxHeight, spaceAbove - margin);
+    } else {
+      placement = "bottom";
+      dynamicMaxHeight = Math.min(panelMaxHeight, spaceBelow - margin);
+    }
+  }
+
+  // X-Axis: Smart Anchor (Left or Right depending on screen space)
+  const panelStyle = $derived.by(() => {
+    const vw = window.innerWidth;
+    const margin = 8;
+
+    // Check if the trigger is on the right half of the screen
+    const isRightSide = triggerRect.left + triggerRect.width / 2 > vw / 2;
+
+    let s = "";
+
+    // Y-Axis styling
+    if (placement === "bottom") {
+      s += `top: ${triggerRect.bottom + 4}px; `;
+    } else {
+      s += `bottom: ${window.innerHeight - triggerRect.top + 4}px; `;
+    }
+
+    s += `max-height: ${dynamicMaxHeight}px; `;
+    s += `min-width: ${triggerRect.width}px; width: max-content; `;
+
+    // X-Axis styling
+    if (isRightSide) {
+      // Anchor to the right edge to prevent overflowing off the right side of the screen
+      const right = vw - triggerRect.right;
+      s += `right: ${right}px; left: auto; `;
+      s += `max-width: calc(${triggerRect.right}px - ${margin}px); `;
+    } else {
+      // Anchor to the left edge normally
+      s += `left: ${triggerRect.left}px; right: auto; `;
+      s += `max-width: calc(${vw - triggerRect.left}px - ${margin}px); `;
+    }
+
+    return s;
+  });
+
+  // Recalculate position when dropdown opens
+  $effect(() => {
+    if (open && triggerEl) {
+      updatePosition();
+    }
+  });
+
+  // ===== HELPERS =====
   const debounce = <A extends any[]>(fn: (...args: A) => void, ms: number) => {
     let t: ReturnType<typeof setTimeout>;
     return (...args: A) => {
@@ -185,28 +252,6 @@
       loadOptions(query, page + 1, true);
   }
 
-  function updatePosition() {
-    if (!triggerEl) return;
-    const rect = triggerEl.getBoundingClientRect();
-    const vh = window.innerHeight,
-      spaceBelow = vh - rect.bottom,
-      spaceAbove = rect.top,
-      margin = 8;
-    triggerRect = {
-      top: rect.top,
-      bottom: rect.bottom,
-      left: rect.left,
-      width: rect.width,
-    };
-    if (spaceBelow < panelMaxHeight + margin && spaceAbove > spaceBelow) {
-      placement = "top";
-      dynamicMaxHeight = Math.min(panelMaxHeight, spaceAbove - margin);
-    } else {
-      placement = "bottom";
-      dynamicMaxHeight = Math.min(panelMaxHeight, spaceBelow - margin);
-    }
-  }
-
   function openDropdown() {
     if (disabled) return;
     open = true;
@@ -250,6 +295,7 @@
     onchange?.(value);
     closeDropdown();
   }
+
   function removeValue(v: T, e: MouseEvent) {
     e.stopPropagation();
     const next = selectedValues.filter((x) => x !== v);
@@ -303,6 +349,8 @@
     if (fetchOptions) debouncedLoad(q);
   }
 
+  // ===== EFFECTS =====
+  // Close on outside click, reposition on scroll / resize.
   $effect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
@@ -325,6 +373,7 @@
     };
   });
 
+  // Reset highlighted index when options change
   $effect(() => {
     filteredOptions;
     if (highlighted >= filteredOptions.length) highlighted = 0;
@@ -539,8 +588,6 @@
     display: block;
     color: var(--color-base-content, #0f172a);
     font-family: inherit;
-
-    /* Local overrides mapped directly to theme */
     --dd-bg: var(--color-base-100, #fff);
     --dd-bg-2: var(--color-base-200, #f1f2f5);
     --dd-ink: var(--color-base-content, #0f172a);
@@ -569,7 +616,6 @@
     width: 100%;
     outline: none;
   }
-
   .dropdown-label {
     display: block;
     font-size: 12px;
@@ -699,7 +745,7 @@
 
   .dropdown-panel {
     position: fixed;
-    z-index: 1000;
+    z-index: 9999;
     display: flex;
     flex-direction: column;
     background: var(--dd-bg);

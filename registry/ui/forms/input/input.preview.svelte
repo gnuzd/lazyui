@@ -1,6 +1,7 @@
 <script lang="ts">
   import Input from "./Input.svelte";
-  import { Search, Mail, User, Lock } from "@lucide/svelte";
+  import CodeBlock from "../../CodeBlock.svelte";
+  import { Search, Mail, Eye, EyeOff, AlertCircle } from "@lucide/svelte";
 
   // ===== STATE FOR LIVE DEMOS =====
   let basicText = $state("");
@@ -40,7 +41,9 @@
     <div class="demo-body">
       {@render body()}
     </div>
-    <pre class="demo-code"><code>{code}</code></pre>
+    <div class="demo-code-wrap">
+      <CodeBlock {code} lang="xml" />
+    </div>
   </section>
 {/snippet}
 
@@ -68,7 +71,13 @@
     "Basic Input",
     "Standard text input with a label and placeholder.",
     basicBody,
-    `<Input 
+    `<script lang="ts">
+  import Input from './Input.svelte';
+
+  let basicText = $state('');
+<\/script>
+
+<Input 
   label="Full Name" 
   placeholder="Enter your name..." 
   bind:value={basicText} 
@@ -88,9 +97,15 @@
     "Sizes",
     "Available sizes: sm, md, lg.",
     sizesBody,
-    `<Input size="sm" placeholder="Small input" />
-<Input size="md" placeholder="Medium input (default)" />
-<Input size="lg" placeholder="Large input" />`,
+    `<script lang="ts">
+  import Input from './Input.svelte';
+<\/script>
+
+<div class="flex flex-col gap-4">
+  <Input size="sm" placeholder="Small input" />
+  <Input size="md" placeholder="Medium input (default)" />
+  <Input size="lg" placeholder="Large input" />
+</div>`,
     "i2",
   )}
 
@@ -110,13 +125,20 @@
     "Icons",
     "Add leading or trailing icons using snippets.",
     iconsBody,
-    `<Input placeholder="Search...">
-  {#snippet leadingIcon()}<Search size={16} />{/snippet}
-</Input>
+    `<script lang="ts">
+  import Input from './Input.svelte';
+  import { Search, Mail } from '@lucide/svelte';
+<\/script>
 
-<Input placeholder="Email address">
-  {#snippet leadingIcon()}<Mail size={16} />{/snippet}
-</Input>`,
+<div class="flex flex-col gap-4">
+  <Input placeholder="Search...">
+    {#snippet leadingIcon()}<Search size={16} />{/snippet}
+  </Input>
+
+  <Input placeholder="Email address">
+    {#snippet leadingIcon()}<Mail size={16} />{/snippet}
+  </Input>
+</div>`,
     "i3",
   )}
 
@@ -143,13 +165,23 @@
     "Password & Clearable",
     "Password inputs get an automatic visibility toggle. Set clearable to show an X button when typing.",
     specialBody,
-    `<!-- Password toggle is built-in for type="password" -->
-<Input type="password" label="Password" bind:value={password} />
+    `<script lang="ts">
+  import Input from './Input.svelte';
+  import { Search } from '@lucide/svelte';
 
-<!-- Add clearable to show a clear button -->
-<Input label="Search" bind:value={searchQuery} clearable>
-  {#snippet leadingIcon()}<Search size={16} />{/snippet}
-</Input>`,
+  let password = $state('');
+  let searchQuery = $state('');
+<\/script>
+
+<div class="flex flex-col gap-4">
+  <!-- Password toggle is built-in for type="password" -->
+  <Input type="password" label="Password" bind:value={password} />
+
+  <!-- Add clearable to show a clear button -->
+  <Input label="Search" bind:value={searchQuery} clearable>
+    {#snippet leadingIcon()}<Search size={16} />{/snippet}
+  </Input>
+</div>`,
     "i4",
   )}
 
@@ -169,7 +201,13 @@
     "Textarea",
     'Use type="textarea" for multi-line input.',
     textareaBody,
-    `<Input 
+    `<script lang="ts">
+  import Input from './Input.svelte';
+
+  let bio = $state('');
+<\/script>
+
+<Input 
   type="textarea" 
   label="Bio" 
   placeholder="Tell us about yourself..." 
@@ -197,17 +235,26 @@
     "Validation",
     "Use error to show a red state with a message, or hint for helper text.",
     validationBody,
-    `<Input 
-  label="Email (Error)" 
-  bind:value={errorInput} 
-  error="Please enter a valid email address." 
-/>
+    `<script lang="ts">
+  import Input from './Input.svelte';
 
-<Input 
-  label="Email (Hint)" 
-  bind:value={hintInput} 
-  hint="We'll never share your email." 
-/>`,
+  let errorInput = $state('invalid-email');
+  let hintInput = $state('john@example.com');
+<\/script>
+
+<div class="flex flex-col gap-4">
+  <Input 
+    label="Email (Error)" 
+    bind:value={errorInput} 
+    error="Please enter a valid email address." 
+  />
+
+  <Input 
+    label="Email (Hint)" 
+    bind:value={hintInput} 
+    hint="We'll never share your email." 
+  />
+</div>`,
     "i6",
   )}
 
@@ -222,8 +269,14 @@
     "Disabled & Read-only",
     "disabled blocks interaction, readonly allows selection and copy.",
     disabledBody,
-    `<Input label="Disabled Input" disabled />
-<Input label="Read-only Input" value="Read only value" readonly />`,
+    `<script lang="ts">
+  import Input from './Input.svelte';
+<\/script>
+
+<div class="flex flex-col gap-4">
+  <Input label="Disabled Input" disabled />
+  <Input label="Read-only Input" value="Read only value" readonly />
+</div>`,
     "i7",
   )}
 
@@ -254,23 +307,32 @@
     "CSS variable override",
     "Pass the vars prop to override any internal --input-* token for specific instances.",
     varsBody,
-    `<!-- Override internal CSS variables directly -->
-<Input 
-  label="Custom Accent" 
-  bind:value={value} 
-  vars={{ 
-    '--input-accent': 'var(--color-accent)', 
-    '--input-radius': '2rem' 
-  }} 
-/>
+    `<script lang="ts">
+  import Input from './Input.svelte';
+  import { Search } from '@lucide/svelte';
 
-<Input 
-  label="Custom Error" 
-  error="Error with custom color"
-  vars={{ '--input-error': 'var(--color-warning)' }}
->
-  {#snippet leadingIcon()}<Search size={16} />{/snippet}
-</Input>`,
+  let customVarInput = $state('Custom themed input');
+<\/script>
+
+<div class="flex flex-col gap-4">
+  <!-- Override internal CSS variables directly -->
+  <Input 
+    label="Custom Accent" 
+    bind:value={customVarInput} 
+    vars={{ 
+      '--input-accent': 'var(--color-accent)', 
+      '--input-radius': '2rem' 
+    }} 
+  />
+
+  <Input 
+    label="Custom Error" 
+    error="Error with custom color"
+    vars={{ '--input-error': 'var(--color-warning)' }}
+  >
+    {#snippet leadingIcon()}<Search size={16} />{/snippet}
+  </Input>
+</div>`,
     "i8",
   )}
 </div>
@@ -301,7 +363,7 @@
     border-radius: var(--radius-box);
     background: var(--color-base-100);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
   .demo-head {
     display: flex;
@@ -339,11 +401,10 @@
   }
 
   .demo-body {
-    padding: 20px 16px;
+    padding: 24px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: var(--color-base-200);
   }
 
   .field {
@@ -369,18 +430,7 @@
     font-weight: 600;
   }
 
-  .demo-code {
-    margin: 0;
-    padding: 14px 16px;
-    background: #0f172a;
-    color: #e2e8f0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    overflow-x: auto;
+  .demo-code-wrap {
     border-top: 1px solid var(--color-base-300);
-  }
-  .demo-code code {
-    white-space: pre;
   }
 </style>

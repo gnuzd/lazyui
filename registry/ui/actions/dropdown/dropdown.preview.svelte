@@ -4,6 +4,7 @@
     type FetchResult,
     type Option,
   } from "./Dropdown.svelte";
+  import CodeBlock from "../../CodeBlock.svelte";
   import { ChevronDown, Users, Check, Search } from "@lucide/svelte";
 
   // ===== MOCK DATA =====
@@ -64,13 +65,11 @@
     const start = page * pageSize;
     const end = start + pageSize;
     return {
-      options: filtered
-        .slice(start, end)
-        .map((item) => ({
-          value: item.id,
-          label: item.name,
-          description: item.desc,
-        })),
+      options: filtered.slice(start, end).map((item) => ({
+        value: item.id,
+        label: item.name,
+        description: item.desc,
+      })),
       total: filtered.length,
       hasMore: end < filtered.length,
     };
@@ -119,7 +118,9 @@
     <div class="demo-body">
       {@render body()}
     </div>
-    <pre class="demo-code"><code>{code}</code></pre>
+    <div class="demo-code-wrap">
+      <CodeBlock {code} lang="xml" />
+    </div>
   </section>
 {/snippet}
 
@@ -147,7 +148,27 @@
     "Single · static",
     "Basic single select with static options.",
     singleBody,
-    `<Dropdown label="Fruit" options={fruits} bind:value={single} />`,
+    `<script lang="ts">
+  import Dropdown, { type Option } from './Dropdown.svelte';
+
+  const fruits: Option<string>[] = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+    { value: "cherry", label: "Cherry", description: "Sweet and red" },
+    { value: "durian", label: "Durian", disabled: true },
+    { value: "elderberry", label: "Elderberry" },
+    { value: "fig", label: "Fig" },
+  ];
+
+  let single = $state<string | null>(null);
+<\/script>
+
+<Dropdown 
+  label="Fruit" 
+  placeholder="Pick a fruit"
+  options={fruits} 
+  bind:value={single} 
+/>`,
     "d1",
   )}
 
@@ -169,7 +190,29 @@
     "Multi · static",
     "multiple enables chip-based multi select.",
     multiBody,
-    `<Dropdown label="Fruits" options={fruits} searchable multiple bind:value={multi} />`,
+    `<script lang="ts">
+  import Dropdown, { type Option } from './Dropdown.svelte';
+
+  const fruits: Option<string>[] = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+    { value: "cherry", label: "Cherry", description: "Sweet and red" },
+    { value: "durian", label: "Durian", disabled: true },
+    { value: "elderberry", label: "Elderberry" },
+    { value: "fig", label: "Fig" },
+  ];
+
+  let multi = $state<string[]>([]);
+<\/script>
+
+<Dropdown 
+  label="Fruits" 
+  placeholder="Pick fruits"
+  options={fruits} 
+  searchable 
+  multiple 
+  bind:value={multi} 
+/>`,
     "d2",
   )}
 
@@ -190,7 +233,39 @@
     "Single · fetch",
     "fetchOptions receives ({ query, signal, page, pageSize }).",
     fetchSingleBody,
-    `<Dropdown label="User" fetchOptions={fetchUsers} searchable bind:value={userId} />`,
+    `<script lang="ts">
+  import Dropdown, { type FetchContext, type Option } from './Dropdown.svelte';
+
+  const USERS = [
+    { id: "1", name: "Alice Johnson", email: "alice@example.com" },
+    { id: "2", name: "Bob Smith", email: "bob@example.com" },
+    { id: "3", name: "Carol Williams", email: "carol@example.com" },
+  ];
+
+  async function fetchUsers({ query, signal }: FetchContext): Promise<Option<string>[]> {
+    await new Promise((r) => setTimeout(r, 400));
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    
+    const q = query.toLowerCase();
+    return USERS.filter(
+      (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+    ).map((u) => ({
+      value: u.id,
+      label: u.name,
+      description: u.email,
+    }));
+  }
+
+  let userId = $state<string | null>(null);
+<\/script>
+
+<Dropdown 
+  label="User" 
+  placeholder="Search users…"
+  fetchOptions={fetchUsers} 
+  searchable 
+  bind:value={userId} 
+/>`,
     "d3",
   )}
 
@@ -212,7 +287,42 @@
     "Pagination",
     "Use paginate={true} to load more items when scrolling near the bottom.",
     paginationBody,
-    `<Dropdown
+    `<script lang="ts">
+  import Dropdown, { type FetchContext, type FetchResult } from './Dropdown.svelte';
+
+  const ALL_ITEMS = Array.from({ length: 55 }, (_, i) => ({
+    id: String(i + 1),
+    name: \`Item \${i + 1}\`,
+    desc: \`Description for item \${i + 1}\`,
+  }));
+
+  async function fetchPaginated({ query, signal, page, pageSize }: FetchContext): Promise<FetchResult<string>> {
+    await new Promise((r) => setTimeout(r, 500));
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    
+    const q = query.toLowerCase();
+    const filtered = ALL_ITEMS.filter(
+      (item) => item.name.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q)
+    );
+    
+    const start = page * pageSize;
+    const end = start + pageSize;
+    
+    return {
+      options: filtered.slice(start, end).map((item) => ({
+        value: item.id,
+        label: item.name,
+        description: item.desc,
+      })),
+      total: filtered.length,
+      hasMore: end < filtered.length,
+    };
+  }
+
+  let value = $state<string | null>(null);
+<\/script>
+
+<Dropdown
   label="Paginated Items"
   fetchOptions={fetchPaginated}
   searchable
@@ -236,11 +346,11 @@
             onclick={toggle}
           >
             <Users size={16} />
-            <span
-              >{custom
+            <span>
+              {custom
                 ? fruits.find((f) => f.value === custom)?.label
-                : "Pick a fruit"}</span
-            >
+                : "Pick a fruit"}
+            </span>
             <ChevronDown size={14} class="chev {open ? 'rotate' : ''}" />
           </button>
         {/snippet}
@@ -251,7 +361,19 @@
     "Custom trigger",
     "Pass a trigger snippet to render your own button.",
     customTriggerBody,
-    `<Dropdown options={fruits} bind:value={custom}>
+    `<script lang="ts">
+  import Dropdown, { type Option } from './Dropdown.svelte';
+  import { ChevronDown, Users } from '@lucide/svelte';
+
+  const fruits: Option<string>[] = [
+    { value: "apple", label: "Apple" },
+    { value: "banana", label: "Banana" },
+  ];
+
+  let custom = $state<string | null>(null);
+<\/script>
+
+<Dropdown options={fruits} bind:value={custom}>
   {#snippet trigger({ open, toggle, disabled })}
     <button type="button" class="custom-trigger" class:open {disabled} onclick={toggle}>
       <Users size={16} />
@@ -292,7 +414,19 @@
     "Custom option",
     "Use renderOption snippet to render each option.",
     customOptionBody,
-    `<Dropdown fetchOptions={fetchUsers} multiple bind:value={assignees}>
+    `<script lang="ts">
+  import Dropdown, { type FetchContext, type Option } from './Dropdown.svelte';
+  import { Check } from '@lucide/svelte';
+
+  async function fetchUsers({ query, signal }: FetchContext): Promise<Option<string>[]> {
+    const res = await fetch(\`/api/users?q=\${query}\`, { signal });
+    return (await res.json()).map((u) => ({ value: u.id, label: u.name, description: u.email }));
+  }
+
+  let assignees = $state<string[]>([]);
+<\/script>
+
+<Dropdown fetchOptions={fetchUsers} multiple bind:value={assignees}>
   {#snippet renderOption(opt, selected)}
     <div class="user-option">
       <div class="avatar">{opt.label.charAt(0)}</div>
@@ -320,7 +454,24 @@
     "Error state",
     "If fetchOptions rejects, the panel shows errorText.",
     errorBody,
-    `<Dropdown label="Failing fetch" fetchOptions={fetchFailing} searchable bind:value={value} />`,
+    `<script lang="ts">
+  import Dropdown, { type FetchContext } from './Dropdown.svelte';
+
+  async function fetchFailing(_ctx: FetchContext): Promise<never> {
+    await new Promise((r) => setTimeout(r, 300));
+    if (_ctx.signal.aborted) throw new DOMException("Aborted", "AbortError");
+    throw new Error("Network error");
+  }
+
+  let value = $state<string | null>(null);
+<\/script>
+
+<Dropdown 
+  label="Failing fetch" 
+  fetchOptions={fetchFailing} 
+  searchable 
+  bind:value={value} 
+/>`,
     "d7",
   )}
 </div>
@@ -351,7 +502,7 @@
     border-radius: var(--radius-box);
     background: var(--color-base-100);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
   .demo-head {
     display: flex;
@@ -389,11 +540,10 @@
   }
 
   .demo-body {
-    padding: 20px 16px;
+    padding: 24px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: var(--color-base-200);
   }
   .field {
     max-width: 360px;
@@ -414,19 +564,8 @@
     font-weight: 600;
   }
 
-  .demo-code {
-    margin: 0;
-    padding: 14px 16px;
-    background: #0f172a;
-    color: #e2e8f0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 12px;
-    line-height: 1.6;
-    overflow-x: auto;
+  .demo-code-wrap {
     border-top: 1px solid var(--color-base-300);
-  }
-  .demo-code code {
-    white-space: pre;
   }
 
   /* Custom trigger styling */

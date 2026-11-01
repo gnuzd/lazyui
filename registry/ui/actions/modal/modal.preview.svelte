@@ -2,6 +2,8 @@
   import { modal } from "../../_utils/modal.svelte";
   import ModalContent from "./preview/ModalContent.svelte";
   import Button from "../button/Button.svelte";
+  import CodeBlock from "../../CodeBlock.svelte";
+  import ModalNested from "./preview/ModalNested.svelte";
 
   // ===== COPY SNIPPET HELPER =====
   let copied = $state<string | null>(null);
@@ -47,9 +49,19 @@
       },
     });
   }
+
+  function openNested() {
+    modal.open(ModalNested, {
+      title: "Nested Parent",
+      props: {
+        title: "Parent Modal",
+        description:
+          "Click the button below to open a nested modal on top of this one.",
+      },
+    });
+  }
 </script>
 
-<!-- Reusable Demo Card Snippet -->
 {#snippet demo(
   title: string,
   desc: string,
@@ -70,7 +82,9 @@
     <div class="demo-body">
       {@render body()}
     </div>
-    <pre class="demo-code"><code>{code}</code></pre>
+    <div class="demo-code-wrap">
+      <CodeBlock {code} lang="xml" />
+    </div>
   </section>
 {/snippet}
 
@@ -92,19 +106,39 @@
     "Basic Modal",
     "Opens a standard modal with a title, description, and injected onClose prop.",
     basicBody,
-    `import { modal } from './modal.svelte';
-import ModalContent from './ModalContent.svelte';
+    `<!-- ModalContent.svelte -->
+<script lang="ts">
+  let { title, description, onClose }: { 
+    title: string; 
+    description: string; 
+    onClose: () => void; 
+  } = $props();
+<\/script>
 
-function openBasic() {
-  modal.open(ModalContent, {
-    title: 'Basic Modal',
-    props: {
-      title: 'Welcome',
-      description: 'This is a basic modal.',
-    },
-    onDismiss: () => console.log('Dismissed!'),
-  });
-}`,
+<div class="modal-body">
+  <h3>{title}</h3>
+  <p>{description}</p>
+  <button onclick={onClose}>Cancel</button>
+</div>
+
+<!-- Parent Component -->
+<script lang="ts">
+  import { modal } from './modal.svelte';
+  import ModalContent from './ModalContent.svelte';
+
+  function openBasic() {
+    modal.open(ModalContent, {
+      title: 'Basic Modal',
+      props: {
+        title: 'Welcome to the Modal',
+        description: 'This modal is rendered via the imperative API.',
+      },
+      onDismiss: () => console.log('Dismissed!'),
+    });
+  }
+<\/script>
+
+<Button onclick={openBasic}>Open Basic Modal</Button>`,
     "m1",
   )}
 
@@ -137,11 +171,20 @@ function openBasic() {
     "Sizes",
     "Control the max-width of the modal using the size option.",
     sizesBody,
-    `modal.open(ModalContent, {
-  title: 'Full Screen',
-  size: 'full', // 'sm' | 'md' | 'lg' | 'xl' | 'full'
-  props: { ... }
-});`,
+    `import { modal } from './modal.svelte';
+import ModalContent from './ModalContent.svelte';
+
+// size options: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+function openFullScreen() {
+  modal.open(ModalContent, {
+    title: 'Full Screen',
+    size: 'full', 
+    props: {
+      title: 'Full Screen Modal',
+      description: 'This modal takes up the entire viewport.'
+    }
+  });
+}`,
     "m2",
   )}
 
@@ -157,35 +200,59 @@ function openBasic() {
     "Non-dismissible",
     "Set dismissible: false to force the user to use the action buttons. Backdrop clicks and Escape are disabled.",
     nonDismissibleBody,
-    `modal.open(ModalContent, {
-  title: 'Action Required',
-  dismissible: false, 
-  props: { ... }
-});`,
+    `import { modal } from './modal.svelte';
+import ModalContent from './ModalContent.svelte';
+
+function openNonDismissible() {
+  modal.open(ModalContent, {
+    title: 'Action Required',
+    dismissible: false, // User cannot click outside or press Escape
+    props: { 
+      title: 'Terms of Service', 
+      description: 'You must explicitly click Cancel.' 
+    }
+  });
+}`,
     "m3",
   )}
 
   <!-- 4. NESTED MODALS -->
   {#snippet nestedBody()}
     <div class="flex-wrap">
-      <Button variant="accent" onclick={openBasic}>Open Parent Modal</Button>
+      <Button variant="accent" onclick={openNested}>Open Parent Modal</Button>
     </div>
-    <p class="text-sm text-base-content/60 mt-2">
-      Click "Open Nested" inside the modal to spawn a child modal.
+    <p class="desc-text">
+      Click the button inside the modal to spawn a nested child modal.
     </p>
   {/snippet}
   {@render demo(
     "Nested Modals",
     "The store stacks instances in an array, allowing modals to spawn other modals naturally.",
     nestedBody,
-    `// Inside a modal component:
-function openNested() {
-  modal.open(ModalContent, {
-    title: 'Nested',
-    size: 'sm',
-    props: { ... }
-  });
-}`,
+    `// Inside NestedModalContent.svelte (the first modal)
+<script lang="ts">
+  import { modal } from './modal.svelte';
+  import ModalContent from './ModalContent.svelte';
+  
+  let { onClose }: { onClose: () => void } = $props();
+
+  function openNested() {
+    modal.open(ModalContent, {
+      title: 'Nested Modal',
+      size: 'sm',
+      props: { 
+        title: 'Child Modal', 
+        description: 'I am on top of the parent modal!' 
+      }
+    });
+  }
+<\/script>
+
+<div>
+  <h3>Parent Modal</h3>
+  <button onclick={openNested}>Open Nested</button>
+  <button onclick={onClose}>Close</button>
+</div>`,
     "m4",
   )}
 
@@ -233,13 +300,12 @@ modal.closeAll();`,
     color: color-mix(in oklch, var(--color-base-content) 60%, transparent);
   }
 
-  /* Demo Card matching the Layout Theme */
   .demo {
     border: 1px solid var(--color-base-300);
     border-radius: var(--radius-box);
     background: var(--color-base-100);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
   }
   .demo-head {
     display: flex;
@@ -277,11 +343,10 @@ modal.closeAll();`,
   }
 
   .demo-body {
-    padding: 20px 16px;
+    padding: 24px 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: var(--base-200);
   }
 
   .flex-wrap {
@@ -290,19 +355,13 @@ modal.closeAll();`,
     gap: 12px;
     align-items: flex-start;
   }
-
-  .demo-code {
-    margin: 0;
-    padding: 14px 16px;
-    background: #0f172a;
-    color: #e2e8f0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  .desc-text {
     font-size: 12px;
-    line-height: 1.6;
-    overflow-x: auto;
-    border-top: 1px solid var(--base-300);
+    color: color-mix(in oklch, var(--color-base-content) 60%, transparent);
+    margin: 0;
   }
-  .demo-code code {
-    white-space: pre;
+
+  .demo-code-wrap {
+    border-top: 1px solid var(--color-base-300);
   }
 </style>

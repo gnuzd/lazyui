@@ -7,8 +7,13 @@ import { basename, dirname, join, relative, sep } from "node:path";
 const CLI = "lazyui";
 const REPO = "https://raw.githubusercontent.com/gnuzd/lazyui/main/registry";
 const LOCAL = process.env.LAZYUI_REGISTRY; // a local registry folder, handy before you push
+
+// Configurable paths (defaults are SvelteKit friendly)
 const componentsDir = process.env.LAZYUI_DIR ?? "src/lib/components/ui";
 const themeDir = process.env.LAZYUI_THEME_DIR ?? "src/lib/styles";
+const utilsDir = process.env.LAZYUI_UTILS_DIR ?? "src/lib/utils";
+const utilsAlias = process.env.LAZYUI_UTILS_ALIAS ?? "$lib/utils"; // Change to #lib/utils for plain Svelte 5
+
 const CSS_ENTRIES = ["src/app.css", "src/routes/layout.css", "src/index.css"];
 
 const USAGE = [
@@ -19,6 +24,11 @@ const USAGE = [
     " add <component...>        e.g. button input dropdown (also installs what they need)",
   "  " + CLI + " theme list                list available themes",
   "  " + CLI + " theme add <theme...>      e.g. dracula nord",
+  "",
+  "Environment Variables:",
+  "  LAZYUI_DIR                target folder for components (default: src/lib/components/ui)",
+  "  LAZYUI_UTILS_DIR          target folder for utils (default: src/lib/utils)",
+  "  LAZYUI_UTILS_ALIAS        import alias for utils (default: $lib/utils)",
   "",
   "Flags:",
   "  -f, --force                 overwrite files that already exist",
@@ -69,7 +79,7 @@ const ensureLines = async (file: string, wanted: string[]) => {
 const listThemes = async (): Promise<string[]> =>
   JSON.parse(await get("themes.json"));
 
-// Adds `@import "./lazyui/index.css"` to the app's main CSS, right after @import "tailwindcss".
+// Adds `@import "./lazyui/app.css"` to the app's main CSS, right after @import "tailwindcss".
 async function importIntoApp(target: string) {
   const entry = CSS_ENTRIES.find((f) => existsSync(f));
   let rel = relative(dirname(entry ?? CSS_ENTRIES[0]), target)
@@ -102,20 +112,23 @@ async function init() {
     join(themeDir, "themes/lazyui.css"),
     await get("theme/themes/lazyui.css"),
   );
-  // index.css is the single place where themes get imported. Re-running init keeps your other imports.
-  const index = join(themeDir, "index.css");
-  await ensureLines(index, [
+
+  // Use app.css instead of index.css for the main theme entry point
+  const appCss = join(themeDir, "app.css");
+  await ensureLines(appCss, [
     '@import "tailwindcss";',
     '@import "./base.css";',
     '@import "./themes/lazyui.css";',
   ]);
-  await importIntoApp(index);
+  await importIntoApp(appCss);
+
   console.log("\nNext: " + CLI + " add button input dropdown");
 }
 
 async function themeAdd(names: string[]) {
-  const index = join(themeDir, "index.css");
-  if (!existsSync(index))
+  // Target app.css instead of index.css
+  const appCss = join(themeDir, "app.css");
+  if (!existsSync(appCss))
     fail("Theme files not found. Run '" + CLI + " init' first.");
   const all = await listThemes();
   for (const n of names) {
@@ -127,7 +140,8 @@ async function themeAdd(names: string[]) {
       join(themeDir, "themes", n + ".css"),
       await get("theme/themes/" + n + ".css"),
     );
-    await ensureLines(index, ['@import "./themes/' + n + '.css";']);
+    // Add theme import into app.css
+    await ensureLines(appCss, ['@import "./themes/' + n + '.css";']);
   }
   console.log(
     '\nUse it with <html data-theme="' +
@@ -215,27 +229,33 @@ async function add(names: string[]) {
 
   const deps: string[] = [];
   const devDeps: string[] = [];
+
+  // Clean up the alias to prevent double slashes
+  const alias = utilsAlias.replace(/\/$/, "");
+
   for (const n of order) {
     const item = registry[n];
     deps.push(...(item.dependencies ?? []));
     devDeps.push(...(item.devDependencies ?? []));
 
     for (const f of item.files) {
-      // 1. Determine destination path: keep `_utils` structure, flatten components
+      // 1. Determine destination path: _utils go to utilsDir, components to componentsDir
       const isUtil = f.includes("/_utils/");
-      const destPath = isUtil ? f.replace(/^ui\//, "") : basename(f);
+      const destPath = isUtil
+        ? join(utilsDir, basename(f))
+        : join(componentsDir, basename(f));
 
       // 2. Fetch the file content from GitHub/Local
       let content = await get(f);
 
       // 3. Rewrite import paths for components (non-utils files)
-      // Transform ../../_utils/ or ../_utils/ into ./_utils/
+      // Transform ../../_utils/ or ../_utils/ into the configured alias (e.g. $lib/utils/)
       if (!isUtil) {
-        content = content.replace(/(?:\.\.\/)+_utils\//g, "./_utils/");
+        content = content.replace(/(?:\.\.\/)+_utils\//g, `${alias}/`);
       }
 
       // 4. Write the processed content to the user's filesystem
-      await write(join(componentsDir, destPath), content);
+      await write(destPath, content);
     }
   }
 
@@ -245,7 +265,7 @@ async function add(names: string[]) {
   await installPackages(deps, false);
   await installPackages(devDeps, true);
 
-  if (!existsSync(join(themeDir, "index.css"))) {
+  if (!existsSync(join(themeDir, "app.css"))) {
     console.log(
       "\nTip: run '" +
         CLI +
