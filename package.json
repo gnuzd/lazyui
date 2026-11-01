@@ -1,0 +1,31 @@
+{
+  "name": "lazyui",
+  "version": "0.0.1",
+  "description": "Copy-paste Svelte 5 + Tailwind 4 components with daisyUI-style themes",
+  "type": "module",
+  "bin": {
+    "lazyui": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build:cli": "bun build cli/index.ts --outdir dist --target node"
+  },
+  "devDependencies": {
+    "@lucide/svelte": "^1.65.0",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "clsx": "^2.1.1",
+    "svelte": "^5.57.3",
+    "tailwind-merge": "^3.7.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "ts-pattern": "^5.9.2"
+  }
+}

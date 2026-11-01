@@ -1,0 +1,49 @@
+{
+  "utils": {
+    "files": [
+      "ui/_utils/cn.ts"
+    ],
+    "dependencies": [
+      "clsx",
+      "tailwind-merge"
+    ]
+  },
+  "button": {
+    "files": [
+      "ui/actions/button/Button.svelte"
+    ],
+    "dependencies": [
+      "@lucide/svelte",
+      "ts-pattern"
+    ],
+    "registryDependencies": [
+      "utils"
+    ]
+  },
+  "dropdown": {
+    "files": [
+      "ui/actions/dropdown/Dropdown.svelte"
+    ],
+    "dependencies": [
+      "@lucide/svelte"
+    ]
+  },
+  "input": {
+    "files": [
+      "ui/forms/input/Input.svelte"
+    ],
+    "dependencies": [
+      "@lucide/svelte"
+    ]
+  },
+  "modal": {
+    "files": [
+      "ui/actions/modal/ModalContainer.svelte",
+      "ui/actions/modal/ModalWrapper.svelte",
+      "ui/_utils/modal.svelte.ts"
+    ],
+    "dependencies": [
+      "@lucide/svelte"
+    ]
+  }
+}

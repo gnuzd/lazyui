@@ -1,0 +1,23 @@
+[data-theme="cupcake"],
+:root:has(input.theme-controller[value="cupcake"]:checked) {
+  color-scheme: light;
+  --color-primary: oklch(75% 0.1 190);
+  --color-primary-content: oklch(25% 0.05 190);
+  --color-secondary: oklch(75% 0.12 20);
+  --color-secondary-content: oklch(25% 0.06 20);
+  --color-accent: oklch(78% 0.12 70);
+  --color-accent-content: oklch(28% 0.06 70);
+  --color-neutral: oklch(30% 0.03 280);
+  --color-neutral-content: oklch(95% 0.01 280);
+  --color-base-100: oklch(97% 0.01 80);
+  --color-base-200: oklch(94% 0.02 80);
+  --color-base-300: oklch(90% 0.02 80);
+  --color-base-content: oklch(30% 0.03 280);
+  --color-info: oklch(75% 0.12 225);
+  --color-success: oklch(75% 0.14 160);
+  --color-warning: oklch(85% 0.14 90);
+  --color-error: oklch(65% 0.2 25);
+  --radius-selector: 1rem;
+  --radius-field: 1rem;
+  --radius-box: 1.5rem;
+}

@@ -1,0 +1,201 @@
+#!/usr/bin/env node
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join, relative, sep } from "node:path";
+
+const CLI = "lazyui";
+const REPO = "https://raw.githubusercontent.com/gnuzd/lazyui/main/registry";
+const LOCAL = process.env.LAZYUI_REGISTRY; // a local registry folder, handy before you push
+const componentsDir = process.env.LAZYUI_DIR ?? "src/lib/components/ui";
+const themeDir = process.env.LAZYUI_THEME_DIR ?? "src/lazyui";
+const CSS_ENTRIES = ["src/app.css", "src/routes/layout.css", "src/index.css"];
+
+const USAGE = [
+  "Usage:",
+  "  " + CLI + " init                      install base styles + default theme",
+  "  " + CLI + " add <component...>        e.g. button input dropdown (also installs what they need)",
+  "  " + CLI + " theme list                list available themes",
+  "  " + CLI + " theme add <theme...>      e.g. dracula nord",
+  "",
+  "Flags:",
+  "  -f, --force                 overwrite files that already exist",
+  "  --no-install                copy files but do not run the package manager",
+].join("\n");
+
+const args = process.argv.slice(2);
+const force = args.includes("--force") || args.includes("-f");
+const noInstall = args.includes("--no-install");
+const [cmd, sub, ...rest] = args.filter((a) => !a.startsWith("-"));
+
+const fail = (message: string): never => {
+  console.error(message);
+  process.exit(1);
+};
+
+const get = async (path: string): Promise<string> => {
+  if (LOCAL) return readFile(join(LOCAL, path), "utf8");
+  const res = await fetch(REPO + "/" + path);
+  if (!res.ok) return fail("Could not download " + path + " (HTTP " + res.status + ")");
+  return res.text();
+};
+
+// Writes a file. Never overwrites an existing one unless --force is given.
+const write = async (dest: string, content: string) => {
+  if (existsSync(dest) && !force) {
+    console.log("=", dest, "(already exists, use --force to overwrite)");
+    return;
+  }
+  await mkdir(dirname(dest), { recursive: true });
+  await writeFile(dest, content);
+  console.log("+", dest);
+};
+
+// Appends the wanted lines to a file, skipping the ones it already contains.
+const ensureLines = async (file: string, wanted: string[]) => {
+  const current = existsSync(file) ? await readFile(file, "utf8") : "";
+  const have = new Set(current.split("\n").map((l) => l.trim()));
+  const missing = wanted.filter((l) => !have.has(l));
+  if (!missing.length) return;
+  const base = current.trimEnd();
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, (base ? base + "\n" : "") + missing.join("\n") + "\n");
+  for (const l of missing) console.log("~", file, "(added " + l + ")");
+};
+
+const listThemes = async (): Promise<string[]> => JSON.parse(await get("themes.json"));
+
+// Adds `@import "./lazyui/index.css"` to the app's main CSS, right after @import "tailwindcss".
+async function importIntoApp(target: string) {
+  const entry = CSS_ENTRIES.find((f) => existsSync(f));
+  let rel = relative(dirname(entry ?? CSS_ENTRIES[0]), target).split(sep).join("/");
+  if (!rel.startsWith(".")) rel = "./" + rel;
+  const line = '@import "' + rel + '";';
+  const manual = () =>
+    console.log('Add this line to your main CSS file, right after @import "tailwindcss":\n  ' + line);
+
+  if (!entry) return manual();
+  const lines = (await readFile(entry, "utf8")).split("\n");
+  if (lines.some((l) => l.trim() === line)) return console.log("=", entry, "(already imports " + rel + ")");
+  const i = lines.findIndex((l) => l.includes("@import") && l.includes("tailwindcss"));
+  if (i < 0) return manual();
+  lines.splice(i + 1, 0, line);
+  await writeFile(entry, lines.join("\n"));
+  console.log("~", entry, "(added " + line + ")");
+}
+
+async function init() {
+  await write(join(themeDir, "base.css"), await get("theme/base.css"));
+  await write(join(themeDir, "themes/lazyui.css"), await get("theme/themes/lazyui.css"));
+  // index.css is the single place where themes get imported. Re-running init keeps your other imports.
+  const index = join(themeDir, "index.css");
+  await ensureLines(index, ['@import "./base.css";', '@import "./themes/lazyui.css";']);
+  await importIntoApp(index);
+  console.log("\nNext: " + CLI + " add button input dropdown");
+}
+
+async function themeAdd(names: string[]) {
+  const index = join(themeDir, "index.css");
+  if (!existsSync(index)) fail("Theme files not found. Run '" + CLI + " init' first.");
+  const all = await listThemes();
+  for (const n of names) {
+    if (!all.includes(n)) fail("Unknown theme '" + n + "'. Available: " + all.join(", "));
+  }
+  for (const n of names) {
+    await write(join(themeDir, "themes", n + ".css"), await get("theme/themes/" + n + ".css"));
+    await ensureLines(index, ['@import "./themes/' + n + '.css";']);
+  }
+  console.log('\nUse it with <html data-theme="' + names[0] + '"> or <input type="radio" class="theme-controller" value="' + names[0] + '" />');
+}
+
+async function themeList() {
+  for (const n of await listThemes()) {
+    const installed = existsSync(join(themeDir, "themes", n + ".css"));
+    console.log(n + (installed ? "  (installed)" : ""));
+  }
+}
+
+type Item = {
+  files: string[];
+  dependencies?: string[]; // npm packages, e.g. "tailwind-merge" or "@floating-ui/dom@^1"
+  devDependencies?: string[];
+  registryDependencies?: string[]; // other registry items this one imports from
+};
+
+const pkgName = (spec: string) => spec.replace(/(?!^)@.*$/, ""); // "@a/b@^1" -> "@a/b"
+
+const detectPm = () =>
+  existsSync("bun.lock") || existsSync("bun.lockb")
+    ? "bun"
+    : existsSync("pnpm-lock.yaml")
+      ? "pnpm"
+      : existsSync("yarn.lock")
+        ? "yarn"
+        : "npm";
+
+// Installs the packages that are not in the project's package.json yet.
+async function installPackages(specs: string[], dev: boolean) {
+  const pkg = existsSync("package.json") ? JSON.parse(await readFile("package.json", "utf8")) : {};
+  const have = { ...pkg.dependencies, ...pkg.devDependencies };
+  const missing = [...new Set(specs)].filter((s) => !(pkgName(s) in have));
+  if (!missing.length) return;
+
+  const pm = detectPm();
+  const devFlag = pm === "bun" || pm === "yarn" ? "--dev" : "--save-dev";
+  const cmd = [pm === "npm" ? "install" : "add", ...(dev ? [devFlag] : []), ...missing];
+  if (noInstall) return console.log("Install manually:", pm, cmd.join(" "));
+
+  console.log("$", pm, cmd.join(" "));
+  const res = spawnSync(pm, cmd, { stdio: "inherit", shell: process.platform === "win32" });
+  if (res.status !== 0) console.error("Install failed. Run it yourself:", pm, cmd.join(" "));
+}
+
+async function add(names: string[]) {
+  const registry: Record<string, Item> = JSON.parse(await get("registry.json"));
+
+  // Resolve registryDependencies recursively. Pushing before recursing makes cycles harmless.
+  const order: string[] = [];
+  const visit = (n: string, from?: string): void => {
+    const item = registry[n];
+    if (!item) {
+      return fail(
+        "Unknown component '" + n + "'" + (from ? " (required by '" + from + "')" : "") +
+          ". Available: " + Object.keys(registry).join(", "),
+      );
+    }
+    if (order.includes(n)) return;
+    order.push(n);
+    for (const d of item.registryDependencies ?? []) visit(d, n);
+  };
+  for (const n of names) visit(n);
+
+  const deps: string[] = [];
+  const devDeps: string[] = [];
+  for (const n of order) {
+    const item = registry[n];
+    deps.push(...(item.dependencies ?? []));
+    devDeps.push(...(item.devDependencies ?? []));
+    for (const f of item.files) {
+      await write(join(componentsDir, f.replace(/^ui\//, "")), await get(f));
+    }
+  }
+
+  const extra = order.filter((n) => !names.includes(n));
+  if (extra.length) console.log("Also added (required): " + extra.join(", "));
+  await installPackages(deps, false);
+  await installPackages(devDeps, true);
+
+  if (!existsSync(join(themeDir, "index.css"))) {
+    console.log("\nTip: run '" + CLI + " init' to install the theme the components rely on.");
+  }
+}
+
+try {
+  if (cmd === "init") await init();
+  else if (cmd === "add" && sub) await add([sub, ...rest]);
+  else if (cmd === "theme" && sub === "list") await themeList();
+  else if (cmd === "theme" && sub === "add" && rest.length) await themeAdd(rest);
+  else fail(USAGE);
+} catch (e) {
+  fail(e instanceof Error ? e.message : String(e));
+}

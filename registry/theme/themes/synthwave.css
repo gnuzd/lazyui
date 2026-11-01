@@ -1,0 +1,20 @@
+[data-theme="synthwave"],
+:root:has(input.theme-controller[value="synthwave"]:checked) {
+  color-scheme: dark;
+  --color-primary: oklch(70% 0.25 350);
+  --color-primary-content: oklch(15% 0.06 350);
+  --color-secondary: oklch(75% 0.16 200);
+  --color-secondary-content: oklch(15% 0.05 200);
+  --color-accent: oklch(85% 0.17 95);
+  --color-accent-content: oklch(20% 0.05 95);
+  --color-neutral: oklch(15% 0.06 290);
+  --color-neutral-content: oklch(85% 0.1 320);
+  --color-base-100: oklch(20% 0.09 290);
+  --color-base-200: oklch(17% 0.09 290);
+  --color-base-300: oklch(14% 0.08 290);
+  --color-base-content: oklch(85% 0.1 320);
+  --color-info: oklch(78% 0.13 230);
+  --color-success: oklch(80% 0.18 160);
+  --color-warning: oklch(85% 0.16 90);
+  --color-error: oklch(66% 0.23 20);
+}
