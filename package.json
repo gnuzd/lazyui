@@ -1,6 +1,6 @@
 {
-  "name": "lazyui",
-  "version": "0.0.1",
+  "name": "lazyui-svelte",
+  "version": "0.0.2",
   "description": "Copy-paste Svelte 5 + Tailwind 4 components with daisyUI-style themes",
   "type": "module",
   "bin": {

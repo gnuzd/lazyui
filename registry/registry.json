@@ -10,7 +10,7 @@
   },
   "button": {
     "files": [
-      "ui/actions/button/Button.svelte"
+      "ui/Button.svelte"
     ],
     "dependencies": [
       "@lucide/svelte",
@@ -22,7 +22,7 @@
   },
   "dropdown": {
     "files": [
-      "ui/actions/dropdown/Dropdown.svelte"
+      "ui/Dropdown.svelte"
     ],
     "dependencies": [
       "@lucide/svelte"
