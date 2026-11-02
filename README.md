@@ -14,13 +14,23 @@ npx lazyui-svelte add button input dropdown
 
 `init` does three things:
 
-1. Creates `src/lazyui/base.css` and `src/lazyui/themes/lazyui.css`.
-2. Creates `src/lazyui/app.css`, the single file that imports the base styles and every theme.
-3. Adds one line to your main CSS file (`src/app.css`, `src/routes/layout.css` or `src/index.css`), right after Tailwind:
+1. Creates `src/lib/styles/base.css` and `src/lib/styles/themes/app.css`.
+2. Adds one line to your main layout:
 
-```css
-@import "tailwindcss";
-@import "./lazyui/app.css";
+```svelte
+<script lang="ts">
+  import '#lib/styles/app.css';
+  import favicon from '#lib/assets/favicon.svg';
+  import type { LayoutProps } from './$types';
+  
+  let { children }: LayoutProps = $props();
+</script>
+
+<svelte:head>
+  <link rel="icon" href={favicon} />
+</svelte:head>
+
+{@render children()}
 ```
 
 Components are flattened and written directly to `src/lib/components/ui/`, while shared utils are placed in `src/lib/utils/`:
@@ -90,7 +100,7 @@ Create `src/lazyui/themes/brand.css`, then add `@import "./themes/brand.css";` t
 | --- | --- |
 | `--color-primary`, `--color-secondary`, `--color-accent`, `--color-neutral` (+ `-content`) | brand colors and the text color on top of them |
 | `--color-base-100`, `--color-base-200`, `--color-base-300`, `--color-base-content` | page background, raised surfaces, borders, default text |
-| `--color-info`, `--color-success`, `--color-warning`, `--color-error` | status colors |
+| `--color-info`, `--color-success`, `--color-warning`, `--color-error` (+ `-content`) | status colors |
 | `--radius-selector`, `--radius-field`, `--radius-box` | radius for toggles/checkboxes, inputs/buttons, cards/popovers |
 | `--size-field` | base unit for control heights (`h-10` equivalent is 10 times this value) |
 | `--border` | default border width |

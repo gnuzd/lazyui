@@ -12,7 +12,7 @@ const LOCAL = process.env.LAZYUI_REGISTRY; // a local registry folder, handy bef
 const componentsDir = process.env.LAZYUI_DIR ?? "src/lib/components/ui";
 const themeDir = process.env.LAZYUI_THEME_DIR ?? "src/lib/styles";
 const utilsDir = process.env.LAZYUI_UTILS_DIR ?? "src/lib/utils";
-const utilsAlias = process.env.LAZYUI_UTILS_ALIAS ?? "$lib/utils"; // Change to #lib/utils for plain Svelte 5
+const utilsAlias = process.env.LAZYUI_UTILS_ALIAS ?? "#lib/utils"; // Change to #lib/utils for plain Svelte 5
 
 const CSS_ENTRIES = ["src/app.css", "src/routes/layout.css", "src/index.css"];
 
@@ -28,7 +28,7 @@ const USAGE = [
   "Environment Variables:",
   "  LAZYUI_DIR                target folder for components (default: src/lib/components/ui)",
   "  LAZYUI_UTILS_DIR          target folder for utils (default: src/lib/utils)",
-  "  LAZYUI_UTILS_ALIAS        import alias for utils (default: $lib/utils)",
+  "  LAZYUI_UTILS_ALIAS        import alias for utils (default: #lib/utils)",
   "",
   "Flags:",
   "  -f, --force                 overwrite files that already exist",
@@ -126,7 +126,7 @@ async function init() {
 }
 
 async function themeAdd(names: string[]) {
-  // Target app.css instead of index.css
+  // Target app.css instead of app.css
   const appCss = join(themeDir, "app.css");
   if (!existsSync(appCss))
     fail("Theme files not found. Run '" + CLI + " init' first.");

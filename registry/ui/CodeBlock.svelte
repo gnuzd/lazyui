@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import hljs from "highlight.js";
 
   let { code, lang = "xml" }: { code: string; lang?: string } = $props();

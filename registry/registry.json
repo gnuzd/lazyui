@@ -26,6 +26,9 @@
     ],
     "dependencies": [
       "@lucide/svelte"
+    ],
+    "registryDependencies": [
+      "utils"
     ]
   },
   "input": {
@@ -34,6 +37,9 @@
     ],
     "dependencies": [
       "@lucide/svelte"
+    ],
+    "registryDependencies": [
+      "utils"
     ]
   },
   "modal": {
@@ -44,6 +50,19 @@
     ],
     "dependencies": [
       "@lucide/svelte"
+    ],
+    "registryDependencies": [
+      "utils"
+    ]
+  },
+  "form": {
+    "files": [
+      "ui/_utils/form.ts",
+      "ui/_utils/form.svelte.ts",
+      "ui/_utils/form.server.ts"
+    ],
+    "dependencies": [
+      "zod"
     ]
   }
 }
