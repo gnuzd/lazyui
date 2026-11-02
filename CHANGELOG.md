@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.3.0...lazyui-svelte-v0.4.0) (2026-11-02)
+
+
+### Features
+
+* **docs:** migrate vanilla preview app to SvelteKit routing ([11f5c66](https://github.com/gnuzd/lazyui/commit/11f5c66119806a09a1aa2facf9a9ec21a88cb97e))
+
 ## [0.3.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.2.0...lazyui-svelte-v0.3.0) (2026-11-02)
 
 
