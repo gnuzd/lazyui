@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.1.0...lazyui-svelte-v0.2.0) (2026-11-02)
+
+
+### Features
+
+* **forms:** add headless createForm utility with Zod 4 validation ([1cf230f](https://github.com/gnuzd/lazyui/commit/1cf230f298da01803b4c531f3f65ef23c7fbc30f))
+
 ## [0.1.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.0.4...lazyui-svelte-v0.1.0) (2026-11-01)
 
 
