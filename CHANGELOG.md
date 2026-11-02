@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.3.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.2.0...lazyui-svelte-v0.3.0) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cli:** LAZYUI_UTILS_ALIAS is removed. Alias now depends on extension mode.
+
+### Features
+
+* **cli:** replace LAZYUI_UTILS_ALIAS with automatic extension-based alias resolution ([2176486](https://github.com/gnuzd/lazyui/commit/217648632dc410626c5da490151147ff6ffb45c1))
+
 ## [0.2.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.1.0...lazyui-svelte-v0.2.0) (2026-11-02)
 
 
