@@ -6,38 +6,58 @@ import { basename, dirname, join, relative, sep } from "node:path";
 
 const CLI = "lazyui";
 const REPO = "https://raw.githubusercontent.com/gnuzd/lazyui/main/registry";
-const LOCAL = process.env.LAZYUI_REGISTRY; // a local registry folder, handy before you push
+const LOCAL = process.env.LAZYUI_REGISTRY;
 
 // Configurable paths (defaults are SvelteKit friendly)
 const componentsDir = process.env.LAZYUI_DIR ?? "src/lib/components/ui";
 const themeDir = process.env.LAZYUI_THEME_DIR ?? "src/lib/styles";
 const utilsDir = process.env.LAZYUI_UTILS_DIR ?? "src/lib/utils";
-const utilsAlias = process.env.LAZYUI_UTILS_ALIAS ?? "#lib/utils"; // Change to #lib/utils for plain Svelte 5
 
 const CSS_ENTRIES = ["src/app.css", "src/routes/layout.css", "src/index.css"];
+
+const args = process.argv.slice(2);
+const force = args.includes("--force") || args.includes("-f");
+const noInstall = args.includes("--no-install");
+
+// ---------- Extensions resolution ----------
+// Priority: CLI flag > env LAZYUI_EXTENSIONS > default ("on")
+function resolveExtensions(): boolean {
+  if (args.includes("--ext")) return true;
+  if (args.includes("--no-ext")) return false;
+  const env = (process.env.LAZYUI_EXTENSIONS ?? "on").toLowerCase().trim();
+  return env !== "off" && env !== "0" && env !== "false";
+}
+const ADD_EXTENSIONS = resolveExtensions();
+
+// ---------- Alias resolution (derived from extension mode) ----------
+// extensions ON  -> "#lib/utils" (SvelteKit subpath import)
+// extensions OFF -> "$lib/utils" (classic SvelteKit alias)
+const utilsAlias = ADD_EXTENSIONS ? "#lib/utils" : "$lib/utils";
 
 const USAGE = [
   "Usage:",
   "  " + CLI + " init                      install base styles + default theme",
-  "  " +
-    CLI +
-    " add <component...>        e.g. button input dropdown (also installs what they need)",
+  "  " + CLI + " add <component...>        e.g. button input dropdown",
   "  " + CLI + " theme list                list available themes",
   "  " + CLI + " theme add <theme...>      e.g. dracula nord",
   "",
   "Environment Variables:",
   "  LAZYUI_DIR                target folder for components (default: src/lib/components/ui)",
   "  LAZYUI_UTILS_DIR          target folder for utils (default: src/lib/utils)",
-  "  LAZYUI_UTILS_ALIAS        import alias for utils (default: #lib/utils)",
+  "  LAZYUI_EXTENSIONS         'on' | 'off' — auto-append file extensions to relative",
+  "                            imports. Default: on.",
+  "",
+  "Extension mode also determines the import alias:",
+  "  on  -> #lib/utils",
+  "  off -> $lib/utils",
   "",
   "Flags:",
   "  -f, --force                 overwrite files that already exist",
   "  --no-install                copy files but do not run the package manager",
+  "  --ext                       force auto-appending extensions (overrides env)",
+  "  --no-ext                    disable auto-appending extensions (overrides env)",
 ].join("\n");
 
-const args = process.argv.slice(2);
-const force = args.includes("--force") || args.includes("-f");
-const noInstall = args.includes("--no-install");
 const [cmd, sub, ...rest] = args.filter((a) => !a.startsWith("-"));
 
 const fail = (message: string): never => {
@@ -53,7 +73,6 @@ const get = async (path: string): Promise<string> => {
   return res.text();
 };
 
-// Writes a file. Never overwrites an existing one unless --force is given.
 const write = async (dest: string, content: string) => {
   if (existsSync(dest) && !force) {
     console.log("=", dest, "(already exists, use --force to overwrite)");
@@ -64,7 +83,6 @@ const write = async (dest: string, content: string) => {
   console.log("+", dest);
 };
 
-// Appends the wanted lines to a file, skipping the ones it already contains.
 const ensureLines = async (file: string, wanted: string[]) => {
   const current = existsSync(file) ? await readFile(file, "utf8") : "";
   const have = new Set(current.split("\n").map((l) => l.trim()));
@@ -79,7 +97,6 @@ const ensureLines = async (file: string, wanted: string[]) => {
 const listThemes = async (): Promise<string[]> =>
   JSON.parse(await get("themes.json"));
 
-// Adds `@import "./lazyui/app.css"` to the app's main CSS, right after @import "tailwindcss".
 async function importIntoApp(target: string) {
   const entry = CSS_ENTRIES.find((f) => existsSync(f));
   let rel = relative(dirname(entry ?? CSS_ENTRIES[0]), target)
@@ -113,7 +130,6 @@ async function init() {
     await get("theme/themes/lazyui.css"),
   );
 
-  // Use app.css instead of index.css for the main theme entry point
   const appCss = join(themeDir, "app.css");
   await ensureLines(appCss, [
     '@import "tailwindcss";',
@@ -126,7 +142,6 @@ async function init() {
 }
 
 async function themeAdd(names: string[]) {
-  // Target app.css instead of app.css
   const appCss = join(themeDir, "app.css");
   if (!existsSync(appCss))
     fail("Theme files not found. Run '" + CLI + " init' first.");
@@ -140,7 +155,6 @@ async function themeAdd(names: string[]) {
       join(themeDir, "themes", n + ".css"),
       await get("theme/themes/" + n + ".css"),
     );
-    // Add theme import into app.css
     await ensureLines(appCss, ['@import "./themes/' + n + '.css";']);
   }
   console.log(
@@ -161,12 +175,12 @@ async function themeList() {
 
 type Item = {
   files: string[];
-  dependencies?: string[]; // npm packages, e.g. "tailwind-merge" or "@floating-ui/dom@^1"
+  dependencies?: string[];
   devDependencies?: string[];
-  registryDependencies?: string[]; // other registry items this one imports from
+  registryDependencies?: string[];
 };
 
-const pkgName = (spec: string) => spec.replace(/(?!^)@.*$/, ""); // "@a/b@^1" -> "@a/b"
+const pkgName = (spec: string) => spec.replace(/(?!^)@.*$/, "");
 
 const detectPm = () =>
   existsSync("bun.lock") || existsSync("bun.lockb")
@@ -177,7 +191,6 @@ const detectPm = () =>
         ? "yarn"
         : "npm";
 
-// Installs the packages that are not in the project's package.json yet.
 async function installPackages(specs: string[], dev: boolean) {
   const pkg = existsSync("package.json")
     ? JSON.parse(await readFile("package.json", "utf8"))
@@ -204,10 +217,22 @@ async function installPackages(specs: string[], dev: boolean) {
     console.error("Install failed. Run it yourself:", pm, cmd.join(" "));
 }
 
+function addExtensionsToImports(content: string): string {
+  return content.replace(
+    /(from\s+|import\s+)(['"])(\.[^'"]+)\2/g,
+    (match, prefix: string, quote: string, importPath: string) => {
+      if (/\.[a-zA-Z0-9]+$/.test(importPath)) return match;
+
+      const lastSegment = importPath.split("/").pop() ?? "";
+      const ext = /^[A-Z]/.test(lastSegment) ? ".svelte" : ".js";
+      return `${prefix}${quote}${importPath}${ext}${quote}`;
+    },
+  );
+}
+
 async function add(names: string[]) {
   const registry: Record<string, Item> = JSON.parse(await get("registry.json"));
 
-  // Resolve registryDependencies recursively. Pushing before recursing makes cycles harmless.
   const order: string[] = [];
   const visit = (n: string, from?: string): void => {
     const item = registry[n];
@@ -230,8 +255,12 @@ async function add(names: string[]) {
   const deps: string[] = [];
   const devDeps: string[] = [];
 
-  // Clean up the alias to prevent double slashes
-  const alias = utilsAlias.replace(/\/$/, "");
+  console.log(
+    "i extensions: " +
+      (ADD_EXTENSIONS ? "on" : "off") +
+      "  |  alias: " +
+      utilsAlias,
+  );
 
   for (const n of order) {
     const item = registry[n];
@@ -239,22 +268,21 @@ async function add(names: string[]) {
     devDeps.push(...(item.devDependencies ?? []));
 
     for (const f of item.files) {
-      // 1. Determine destination path: _utils go to utilsDir, components to componentsDir
       const isUtil = f.includes("/_utils/");
       const destPath = isUtil
         ? join(utilsDir, basename(f))
         : join(componentsDir, basename(f));
 
-      // 2. Fetch the file content from GitHub/Local
       let content = await get(f);
 
-      // 3. Rewrite import paths for components (non-utils files)
-      // Transform ../../_utils/ or ../_utils/ into the configured alias (e.g. $lib/utils/)
       if (!isUtil) {
-        content = content.replace(/(?:\.\.\/)+_utils\//g, `${alias}/`);
+        content = content.replace(/(?:\.\.\/)+_utils\//g, `${utilsAlias}/`);
+
+        if (ADD_EXTENSIONS) {
+          content = addExtensionsToImports(content);
+        }
       }
 
-      // 4. Write the processed content to the user's filesystem
       await write(destPath, content);
     }
   }
