@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.4.0...lazyui-svelte-v0.5.0) (2026-11-16)
+
+
+### Features
+
+* **ci:** update path ([e7978d4](https://github.com/gnuzd/lazyui/commit/e7978d452ed2d5da1a41d9b9482271e233d0229d))
+
 ## [0.4.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.3.0...lazyui-svelte-v0.4.0) (2026-11-02)
 
 
