@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { modal } from "../../_utils/modal.svelte";
+  import { modal } from "../../../utils/modal.svelte";
   import ModalContent from "./preview/ModalContent.svelte";
   import Button from "../button/Button.svelte";
   import CodeBlock from "../../CodeBlock.svelte";

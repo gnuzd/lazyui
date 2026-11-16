@@ -2,7 +2,6 @@
 import type { LayoutLoad } from './$types';
 
 export const load: LayoutLoad = () => {
-	// Trỏ đường dẫn đến thư mục registry (cách src/routes 2 cấp)
 	const previews = import.meta.glob('../../registry/ui/**/*.preview.svelte', {
 		eager: true
 	}) as Record<string, { default: any }>;
