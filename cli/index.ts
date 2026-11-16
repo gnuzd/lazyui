@@ -10,8 +10,8 @@ const LOCAL = process.env.LAZYUI_REGISTRY;
 
 // Configurable paths (defaults are SvelteKit friendly)
 const componentsDir = process.env.LAZYUI_DIR ?? 'src/lib/components/ui';
-// utils/ lives next to the ui folder, i.e. inside its parent directory
-// (e.g. src/lib/components/utils/ when componentsDir is src/lib/components/ui).
+// utils/ sits next to the components/ folder, i.e. two levels up from ui
+// (e.g. src/lib/utils/ when componentsDir is src/lib/components/ui).
 const themeDir = process.env.LAZYUI_THEME_DIR ?? 'src/lib/styles';
 
 const CSS_ENTRIES = ['src/app.css', 'src/routes/layout.css', 'src/index.css'];
@@ -35,12 +35,12 @@ const USAGE = [
 	'',
 	'Environment Variables:',
 	'  LAZYUI_DIR                target folder for components (default: src/lib/components/ui)',
-	'                            the utils/ folder is written next to this folder (same level as ui)',
+	'                            the utils/ folder is written next to the components/ folder',
 	'',
 	'Flags:',
 	'  -f, --force                 overwrite files that already exist',
 	'  --no-install                copy files but do not run the package manager',
-	'  --no-ext                    disable auto-appending file extensions to relative imports'
+	'  --no-ext                    disable auto-appending file extensions to imports'
 ].join('\n');
 
 const [cmd, sub, ...rest] = args.filter((a) => !a.startsWith('-'));
@@ -177,16 +177,27 @@ async function installPackages(specs: string[], dev: boolean) {
 }
 
 function addExtensionsToImports(content: string): string {
-	return content.replace(
-		/(from\s+|import\s+)(['"])(\.[^'"]+)\2/g,
+	// Relative imports: .svelte for PascalCase, .js otherwise.
+	content = content.replace(
+		/(from\s+|import\s+)(['"])(\.{1,2}\/[^'"]+)\2/g,
 		(match, prefix: string, quote: string, importPath: string) => {
 			if (/\.[a-zA-Z0-9]+$/.test(importPath)) return match;
-
 			const lastSegment = importPath.split('/').pop() ?? '';
 			const ext = /^[A-Z]/.test(lastSegment) ? '.svelte' : '.js';
 			return `${prefix}${quote}${importPath}${ext}${quote}`;
 		}
 	);
+
+	// Utils alias (#lib/utils/...): append .ts for TS modules.
+	content = content.replace(
+		/(from\s+|import\s+)(['"])(#lib\/utils\/[^'"]+)\2/g,
+		(match, prefix: string, quote: string, importPath: string) => {
+			if (/\.[a-zA-Z0-9]+$/.test(importPath)) return match;
+			return `${prefix}${quote}${importPath}.ts${quote}`;
+		}
+	);
+
+	return content;
 }
 
 async function add(names: string[]) {
@@ -227,7 +238,7 @@ async function add(names: string[]) {
 			// Preserve the path after "utils/" so subfolders/files keep their name.
 			const utilRel = isUtil ? f.slice(f.indexOf('utils/') + 'utils/'.length) : '';
 			const destPath = isUtil
-				? join(dirname(componentsDir), 'utils', utilRel)
+				? join(dirname(dirname(componentsDir)), 'utils', utilRel)
 				: join(componentsDir, basename(f));
 
 			let content = await get(f);
