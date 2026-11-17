@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.5.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.4.0...lazyui-svelte-v0.5.0) (2026-11-17)
+
+
+### Features
+
+* **ci:** update path ([e7978d4](https://github.com/gnuzd/lazyui/commit/e7978d452ed2d5da1a41d9b9482271e233d0229d))
+* update badge component ([a77b763](https://github.com/gnuzd/lazyui/commit/a77b76386678ef660f4f8eab701f0cf9f80e3bdd))
+
+
+### Bug Fixes
+
+* **ci:** missing extension ([b12dad8](https://github.com/gnuzd/lazyui/commit/b12dad89826206b4fc5800b5d270206c061af2c8))
+
 ## [0.4.0](https://github.com/gnuzd/lazyui/compare/lazyui-svelte-v0.3.0...lazyui-svelte-v0.4.0) (2026-11-02)
 
 
