@@ -47,7 +47,8 @@
       "ui/data-display/badge/Badge.svelte"
     ],
     "dependencies": [
-      "@lucide/svelte"
+      "@lucide/svelte",
+      "ts-pattern"
     ],
     "registryDependencies": [
       "utils"
